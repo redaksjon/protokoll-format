@@ -152,22 +152,50 @@ export async function migrateFile(
     let rawTranscriptData: RawTranscriptData | null = null;
     const dir = path.dirname(mdPath);
     const basename = path.basename(mdPath, '.md');
-    const rawPath = path.join(dir, '.transcript', `${basename}.json`);
-
+    const transcriptDir = path.join(dir, '.transcript');
+    
+    // Try exact match first
+    let rawPath = path.join(transcriptDir, `${basename}.json`);
+    let foundRaw = false;
+    
     try {
-      const rawContent = await fs.readFile(rawPath, 'utf8');
-      const rawJson = JSON.parse(rawContent);
-      rawTranscriptData = {
-        text: rawJson.text || rawJson,
-        model: rawJson.model,
-        duration: rawJson.duration,
-        audioFile: rawJson.audioFile,
-        audioHash: rawJson.audioHash,
-        transcribedAt: rawJson.transcribedAt,
-        confidence: rawJson.confidence,
-      };
+      await fs.access(rawPath);
+      foundRaw = true;
     } catch {
-      // Raw transcript doesn't exist, that's fine
+      // Exact match not found, try prefix matching
+      // Extract prefix like "01-1313" from "01-1313-improve-title-generation"
+      const prefixMatch = basename.match(/^(\d{2}-\d{4})/);
+      if (prefixMatch) {
+        const prefix = prefixMatch[1];
+        try {
+          const files = await fs.readdir(transcriptDir);
+          const matchingFile = files.find(f => f.startsWith(prefix) && f.endsWith('.json'));
+          if (matchingFile) {
+            rawPath = path.join(transcriptDir, matchingFile);
+            foundRaw = true;
+          }
+        } catch {
+          // .transcript directory doesn't exist
+        }
+      }
+    }
+
+    if (foundRaw) {
+      try {
+        const rawContent = await fs.readFile(rawPath, 'utf8');
+        const rawJson = JSON.parse(rawContent);
+        rawTranscriptData = {
+          text: rawJson.text || rawJson,
+          model: rawJson.model,
+          duration: rawJson.duration,
+          audioFile: rawJson.audioFile,
+          audioHash: rawJson.audioHash,
+          transcribedAt: rawJson.transcribedAt,
+          confidence: rawJson.confidence,
+        };
+      } catch {
+        result.warnings.push(`Found raw transcript at ${rawPath} but failed to parse it`);
+      }
     }
 
     if (options.dryRun) {
