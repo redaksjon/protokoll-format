@@ -8,6 +8,24 @@
 // Main transcript class
 export { PklTranscript } from './transcript.js';
 
+// Storage API - the primary way to interact with transcripts
+export {
+  listTranscripts,
+  transcriptExists,
+  deleteTranscript,
+  getPklPath,
+  readTranscript,
+  createTranscript,
+  openTranscript,
+} from './storage.js';
+
+export type {
+  ListTranscriptsOptions,
+  TranscriptListItem,
+  ListTranscriptsResult,
+  TranscriptData,
+} from './storage.js';
+
 // Types
 export type {
   TranscriptMetadata,
@@ -23,18 +41,7 @@ export type {
   Artifact,
   RawTranscriptData,
   TranscriptHistory,
-  MigrationOptions,
-  MigrationResult,
-  BatchMigrationOptions,
-  BatchMigrationResult,
 } from './types.js';
-
-// Migration utilities
-export {
-  migrateFile,
-  migrateDirectory,
-  validateMigration,
-} from './migration.js';
 
 // Schema utilities (for advanced use)
 export {
