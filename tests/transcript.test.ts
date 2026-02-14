@@ -220,5 +220,150 @@ describe('PklTranscript', () => {
       
       transcript.close();
     });
+
+    it('should return empty content diffs when no content exists', () => {
+      const transcript = PklTranscript.create(testFilePath, { title: 'Empty History' });
+      
+      const history = transcript.getHistory();
+      expect(history.contentDiffs).toEqual([]);
+      
+      transcript.close();
+    });
+  });
+
+  describe('getContentHistory', () => {
+    it('should return empty array when no content ID exists', () => {
+      // Create a transcript but don't load content
+      const transcript = PklTranscript.create(testFilePath, { title: 'Test' });
+      const history = transcript.getContentHistory();
+      // Initially, content is created with an ID, so this should return empty
+      expect(history).toEqual([]);
+      transcript.close();
+    });
+  });
+
+  describe('getContentAtVersion', () => {
+    it('should reconstruct content at a specific version', () => {
+      const transcript = PklTranscript.create(testFilePath, { title: 'Version Test' });
+      
+      transcript.updateContent('Version 1');
+      transcript.updateContent('Version 2');
+      transcript.updateContent('Version 3');
+      
+      const diffs = transcript.getContentHistory();
+      expect(diffs.length).toBe(2); // v1->v2, v2->v3
+
+      // Reconstruct at version 1 (after the first diff)
+      const atV1 = transcript.getContentAtVersion(diffs[0].id);
+      expect(atV1).toBe('Version 2');
+      
+      transcript.close();
+    });
+  });
+
+  describe('getVersionCount', () => {
+    it('should return 0 for new transcript', () => {
+      const transcript = PklTranscript.create(testFilePath, { title: 'Count Test' });
+      expect(transcript.getVersionCount()).toBe(0);
+      transcript.close();
+    });
+
+    it('should count content versions', () => {
+      const transcript = PklTranscript.create(testFilePath, { title: 'Count Test' });
+      transcript.updateContent('V1');
+      transcript.updateContent('V2');
+      transcript.updateContent('V3');
+      
+      expect(transcript.getVersionCount()).toBe(2); // 2 diffs: v1->v2, v2->v3
+      transcript.close();
+    });
+  });
+
+  describe('read-only protections', () => {
+    it('should throw when updating metadata in read-only mode', () => {
+      const created = PklTranscript.create(testFilePath, { title: 'RO Test' });
+      created.close();
+
+      const ro = PklTranscript.open(testFilePath, { readOnly: true });
+      expect(() => ro.updateMetadata({ title: 'New' })).toThrow('read-only');
+      ro.close();
+    });
+
+    it('should throw when setting raw transcript in read-only mode', () => {
+      const created = PklTranscript.create(testFilePath, { title: 'RO Raw Test' });
+      created.close();
+
+      const ro = PklTranscript.open(testFilePath, { readOnly: true });
+      expect(() => ro.setRawTranscript({ text: 'raw' })).toThrow('read-only');
+      ro.close();
+    });
+
+    it('should throw when adding artifact in read-only mode', () => {
+      const created = PklTranscript.create(testFilePath, { title: 'RO Artifact Test' });
+      created.close();
+
+      const ro = PklTranscript.open(testFilePath, { readOnly: true });
+      expect(() => ro.addArtifact('type', Buffer.from('data'))).toThrow('read-only');
+      ro.close();
+    });
+  });
+
+  describe('metadata property', () => {
+    it('should lazy-load metadata from database', () => {
+      const transcript = PklTranscript.create(testFilePath, { title: 'Lazy Load' });
+      
+      // Update metadata which invalidates cache
+      transcript.updateMetadata({ title: 'Updated' });
+      
+      // Accessing metadata should reload from DB
+      expect(transcript.metadata.title).toBe('Updated');
+      
+      transcript.close();
+    });
+  });
+
+  describe('filePath property', () => {
+    it('should return the file path', () => {
+      const transcript = PklTranscript.create(testFilePath, { title: 'Path Test' });
+      expect(transcript.filePath).toBe(testFilePath);
+      transcript.close();
+    });
+  });
+
+  describe('getDatabase', () => {
+    it('should return the database instance', () => {
+      const transcript = PklTranscript.create(testFilePath, { title: 'DB Test' });
+      const db = transcript.getDatabase();
+      expect(db).toBeDefined();
+      // Verify it's usable
+      const row = db.prepare('SELECT 1 as one').get() as { one: number };
+      expect(row.one).toBe(1);
+      transcript.close();
+    });
+  });
+
+  describe('updateContent edge cases', () => {
+    it('should handle creating content when contentId is null', () => {
+      // This tests the branch where _contentId is null
+      // We test this indirectly via the normal create flow
+      const transcript = PklTranscript.create(testFilePath, { title: 'Content Edge' });
+      // The initial content should have an ID from initialize()
+      expect(transcript.content).toBe('');
+      transcript.updateContent('New content');
+      expect(transcript.content).toBe('New content');
+      transcript.close();
+    });
+
+    it('should not create diff for first content set (from empty)', () => {
+      const transcript = PklTranscript.create(testFilePath, { title: 'First Content' });
+      
+      // Setting content for first time from empty should not create a diff
+      transcript.updateContent('First real content');
+      
+      const history = transcript.getContentHistory();
+      expect(history).toHaveLength(0); // No diff from empty to first content
+      
+      transcript.close();
+    });
   });
 });

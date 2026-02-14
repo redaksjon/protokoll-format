@@ -11,6 +11,8 @@ import {
   initializeSchema,
   getSchemaVersion,
   validateSchema,
+  needsMigration,
+  migrateToLatest,
   CURRENT_SCHEMA_VERSION,
 } from '../src/schema.js';
 import { openDatabase, closeDatabase } from '../src/database.js';
@@ -80,6 +82,84 @@ describe('Schema', () => {
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
 
+      db.close();
+    });
+  });
+
+  describe('getSchemaVersion', () => {
+    it('should return 0 for database without schema_version table', () => {
+      const db = new Database(testDbPath);
+      // Empty database, no tables
+      const version = getSchemaVersion(db);
+      expect(version).toBe(0);
+      db.close();
+    });
+
+    it('should return 0 for empty schema_version table', () => {
+      const db = new Database(testDbPath);
+      db.exec('CREATE TABLE schema_version (version INTEGER PRIMARY KEY)');
+      const version = getSchemaVersion(db);
+      expect(version).toBe(0);
+      db.close();
+    });
+
+    it('should return version from initialized database', () => {
+      const db = new Database(testDbPath);
+      initializeSchema(db);
+      const version = getSchemaVersion(db);
+      expect(version).toBe(CURRENT_SCHEMA_VERSION);
+      db.close();
+    });
+  });
+
+  describe('needsMigration', () => {
+    it('should return true for fresh database', () => {
+      const db = new Database(testDbPath);
+      expect(needsMigration(db)).toBe(true);
+      db.close();
+    });
+
+    it('should return false for database at current version', () => {
+      const db = new Database(testDbPath);
+      initializeSchema(db);
+      expect(needsMigration(db)).toBe(false);
+      db.close();
+    });
+  });
+
+  describe('migrateToLatest', () => {
+    it('should initialize schema on fresh database', () => {
+      const db = new Database(testDbPath);
+      migrateToLatest(db);
+
+      const validation = validateSchema(db);
+      expect(validation.valid).toBe(true);
+      expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
+      db.close();
+    });
+
+    it('should handle already-up-to-date database', () => {
+      const db = new Database(testDbPath);
+      initializeSchema(db);
+      
+      // Should not throw
+      migrateToLatest(db);
+      
+      expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
+      db.close();
+    });
+  });
+
+  describe('initializeSchema idempotency', () => {
+    it('should not overwrite existing schema version', () => {
+      const db = new Database(testDbPath);
+      initializeSchema(db);
+      
+      // Call again - should not throw or duplicate
+      initializeSchema(db);
+      
+      const version = getSchemaVersion(db);
+      expect(version).toBe(CURRENT_SCHEMA_VERSION);
       db.close();
     });
   });

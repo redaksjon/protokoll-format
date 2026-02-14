@@ -1,0 +1,1 @@
+docs: update commit message documentation
