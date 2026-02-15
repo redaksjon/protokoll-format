@@ -1,6 +1,6 @@
 {
   "name": "@redaksjon/protokoll-format",
-  "version": "0.1.1",
+  "version": "0.1.2-dev.0",
   "description": "SQLite-based .pkl format for Protokoll transcripts with change tracking and audit trails",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
