@@ -5,6 +5,12 @@ node_modules/
 # Build output
 dist/
 
+# Environment variables
+.env
+
+# kodrdriv internal files
+.kodrdriv*
+
 # Coverage
 coverage/
 
