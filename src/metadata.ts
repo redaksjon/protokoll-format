@@ -8,7 +8,7 @@ import type { TranscriptMetadata, TranscriptStatus, StatusTransition, Task, Rout
 /**
  * Metadata keys that are stored as simple strings
  */
-const SIMPLE_STRING_KEYS = ['title', 'project', 'projectId', 'recordingTime', 'duration'] as const;
+const SIMPLE_STRING_KEYS = ['id', 'title', 'project', 'projectId', 'recordingTime', 'duration'] as const;
 
 /**
  * Metadata keys that are stored as JSON
@@ -68,14 +68,22 @@ export function loadMetadata(db: Database.Database): TranscriptMetadata {
     value: string;
   }>;
 
-  const metadata: TranscriptMetadata = {};
   const dataMap = new Map(rows.map(r => [r.key, r.value]));
+  
+  // id is required - throw if missing
+  const id = dataMap.get('id');
+  if (!id) {
+    throw new Error('Transcript metadata missing required id field');
+  }
 
-  // Simple string values
+  const metadata: TranscriptMetadata = { id };
+
+  // Simple string values (skip 'id' since we already handled it)
   for (const key of SIMPLE_STRING_KEYS) {
+    if (key === 'id') continue; // Already set
     const value = dataMap.get(key);
     if (value !== undefined) {
-      (metadata as Record<string, unknown>)[key] = value;
+      (metadata as unknown as Record<string, unknown>)[key] = value;
     }
   }
 
@@ -168,7 +176,7 @@ export function updateMetadata(
     for (const [key, newValue] of Object.entries(updates)) {
       if (newValue === undefined) continue;
 
-      const oldValue = (currentMetadata as Record<string, unknown>)[key];
+      const oldValue = (currentMetadata as unknown as Record<string, unknown>)[key];
       
       // Skip if no change
       if (JSON.stringify(oldValue) === JSON.stringify(newValue)) continue;

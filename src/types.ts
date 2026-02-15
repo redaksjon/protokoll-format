@@ -68,6 +68,7 @@ export interface TranscriptEntities {
  * Full transcript metadata
  */
 export interface TranscriptMetadata {
+  id: string; // UUIDv4 identifier for this transcript
   title?: string;
   date?: Date;
   recordingTime?: string;

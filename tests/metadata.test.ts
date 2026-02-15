@@ -29,6 +29,7 @@ describe('Metadata functions', () => {
   describe('saveMetadata', () => {
     it('should save simple string fields', () => {
       const metadata: TranscriptMetadata = {
+        id: 'test-uuid-123',
         title: 'Test Title',
         project: 'Project X',
         projectId: 'px-001',
@@ -41,6 +42,7 @@ describe('Metadata functions', () => {
       const rows = db.prepare('SELECT key, value FROM metadata').all() as Array<{ key: string; value: string }>;
       const dataMap = new Map(rows.map(r => [r.key, r.value]));
 
+      expect(dataMap.get('id')).toBe('test-uuid-123');
       expect(dataMap.get('title')).toBe('Test Title');
       expect(dataMap.get('project')).toBe('Project X');
       expect(dataMap.get('projectId')).toBe('px-001');
@@ -50,28 +52,28 @@ describe('Metadata functions', () => {
 
     it('should save date as ISO string', () => {
       const date = new Date('2025-06-15T10:00:00Z');
-      saveMetadata(db, { date });
+      saveMetadata(db, { id: 'test-uuid-date', date });
 
       const row = db.prepare("SELECT value FROM metadata WHERE key = 'date'").get() as { value: string };
       expect(row.value).toBe(date.toISOString());
     });
 
     it('should save date when passed as string', () => {
-      saveMetadata(db, { date: '2025-06-15' as unknown as Date });
+      saveMetadata(db, { id: 'test-uuid-datestr', date: '2025-06-15' as unknown as Date });
 
       const row = db.prepare("SELECT value FROM metadata WHERE key = 'date'").get() as { value: string };
       expect(row.value).toBe('2025-06-15');
     });
 
     it('should save status', () => {
-      saveMetadata(db, { status: 'reviewed' });
+      saveMetadata(db, { id: 'test-uuid-status', status: 'reviewed' });
 
       const row = db.prepare("SELECT value FROM metadata WHERE key = 'status'").get() as { value: string };
       expect(row.value).toBe('reviewed');
     });
 
     it('should save confidence as string', () => {
-      saveMetadata(db, { confidence: 0.95 });
+      saveMetadata(db, { id: 'test-uuid-conf', confidence: 0.95 });
 
       const row = db.prepare("SELECT value FROM metadata WHERE key = 'confidence'").get() as { value: string };
       expect(row.value).toBe('0.95');
@@ -79,6 +81,7 @@ describe('Metadata functions', () => {
 
     it('should save JSON fields (tags, routing, history, tasks, entities)', () => {
       const metadata: TranscriptMetadata = {
+        id: 'test-uuid-json',
         tags: ['tag1', 'tag2'],
         routing: { destination: 'project-a', confidence: 0.8, signals: ['keyword'], reasoning: 'matched' },
         history: [{ from: 'initial', to: 'enhanced', at: new Date('2025-01-01') }],
@@ -97,24 +100,26 @@ describe('Metadata functions', () => {
     });
 
     it('should skip undefined fields', () => {
-      saveMetadata(db, { title: 'Only Title' });
+      saveMetadata(db, { id: 'test-uuid-skip', title: 'Only Title' });
 
       const rows = db.prepare('SELECT key FROM metadata').all() as Array<{ key: string }>;
-      expect(rows).toHaveLength(1);
-      expect(rows[0].key).toBe('title');
+      expect(rows).toHaveLength(2); // id and title
+      const keys = rows.map(r => r.key);
+      expect(keys).toContain('id');
+      expect(keys).toContain('title');
     });
   });
 
   describe('loadMetadata', () => {
-    it('should return empty metadata when database has no rows', () => {
-      const result = loadMetadata(db);
-      expect(result).toEqual({});
+    it('should throw error when database has no id field', () => {
+      expect(() => loadMetadata(db)).toThrow('Transcript metadata missing required id field');
     });
 
     it('should load simple string fields', () => {
-      saveMetadata(db, { title: 'Hello', project: 'World', projectId: 'w1', recordingTime: '09:00', duration: '30m' });
+      saveMetadata(db, { id: 'test-uuid-load', title: 'Hello', project: 'World', projectId: 'w1', recordingTime: '09:00', duration: '30m' });
 
       const result = loadMetadata(db);
+      expect(result.id).toBe('test-uuid-load');
       expect(result.title).toBe('Hello');
       expect(result.project).toBe('World');
       expect(result.projectId).toBe('w1');
@@ -123,7 +128,7 @@ describe('Metadata functions', () => {
     });
 
     it('should load date as Date object', () => {
-      saveMetadata(db, { date: new Date('2025-03-15T00:00:00.000Z') });
+      saveMetadata(db, { id: 'test-uuid-loaddate', date: new Date('2025-03-15T00:00:00.000Z') });
 
       const result = loadMetadata(db);
       expect(result.date).toBeInstanceOf(Date);
@@ -131,21 +136,21 @@ describe('Metadata functions', () => {
     });
 
     it('should load status', () => {
-      saveMetadata(db, { status: 'in_progress' });
+      saveMetadata(db, { id: 'test-uuid-loadstatus', status: 'in_progress' });
 
       const result = loadMetadata(db);
       expect(result.status).toBe('in_progress');
     });
 
     it('should load confidence as number', () => {
-      saveMetadata(db, { confidence: 0.85 });
+      saveMetadata(db, { id: 'test-uuid-loadconf', confidence: 0.85 });
 
       const result = loadMetadata(db);
       expect(result.confidence).toBe(0.85);
     });
 
     it('should load tags array', () => {
-      saveMetadata(db, { tags: ['a', 'b', 'c'] });
+      saveMetadata(db, { id: 'test-uuid-loadtags', tags: ['a', 'b', 'c'] });
 
       const result = loadMetadata(db);
       expect(result.tags).toEqual(['a', 'b', 'c']);
@@ -153,7 +158,7 @@ describe('Metadata functions', () => {
 
     it('should load routing metadata', () => {
       const routing = { destination: 'proj', confidence: 0.9, signals: ['sig'], reasoning: 'reason' };
-      saveMetadata(db, { routing });
+      saveMetadata(db, { id: 'test-uuid-loadrouting', routing });
 
       const result = loadMetadata(db);
       expect(result.routing).toEqual(routing);
@@ -161,7 +166,7 @@ describe('Metadata functions', () => {
 
     it('should load history with Date conversion', () => {
       const history = [{ from: 'initial' as const, to: 'enhanced' as const, at: new Date('2025-01-01T00:00:00.000Z') }];
-      saveMetadata(db, { history });
+      saveMetadata(db, { id: 'test-uuid-loadhistory', history });
 
       const result = loadMetadata(db);
       expect(result.history).toHaveLength(1);
@@ -179,7 +184,7 @@ describe('Metadata functions', () => {
         changed: new Date('2025-01-02T00:00:00.000Z'),
         completed: new Date('2025-01-03T00:00:00.000Z'),
       }];
-      saveMetadata(db, { tasks });
+      saveMetadata(db, { id: 'test-uuid-loadtasks', tasks });
 
       const result = loadMetadata(db);
       expect(result.tasks).toHaveLength(1);
@@ -197,7 +202,7 @@ describe('Metadata functions', () => {
         status: 'open' as const,
         created: new Date('2025-01-01T00:00:00.000Z'),
       }];
-      saveMetadata(db, { tasks });
+      saveMetadata(db, { id: 'test-uuid-loadtasks2', tasks });
 
       const result = loadMetadata(db);
       expect(result.tasks).toHaveLength(1);
@@ -210,7 +215,7 @@ describe('Metadata functions', () => {
         people: [{ id: 'p1', name: 'Alice', type: 'person' as const }],
         companies: [{ id: 'c1', name: 'Acme', type: 'company' as const }],
       };
-      saveMetadata(db, { entities });
+      saveMetadata(db, { id: 'test-uuid-loadentities', entities });
 
       const result = loadMetadata(db);
       expect(result.entities).toBeDefined();
@@ -221,7 +226,7 @@ describe('Metadata functions', () => {
 
   describe('updateMetadata', () => {
     it('should update fields and return changes', () => {
-      saveMetadata(db, { title: 'Old', status: 'initial' });
+      saveMetadata(db, { id: 'test-uuid-update', title: 'Old', status: 'initial' });
 
       const changes = updateMetadata(db, { title: 'New', status: 'enhanced' });
 
@@ -232,7 +237,7 @@ describe('Metadata functions', () => {
     });
 
     it('should skip unchanged fields', () => {
-      saveMetadata(db, { title: 'Same' });
+      saveMetadata(db, { id: 'test-uuid-unchanged', title: 'Same' });
 
       const changes = updateMetadata(db, { title: 'Same' });
 
@@ -240,7 +245,7 @@ describe('Metadata functions', () => {
     });
 
     it('should skip undefined values', () => {
-      saveMetadata(db, { title: 'Keep' });
+      saveMetadata(db, { id: 'test-uuid-undef', title: 'Keep' });
 
       const changes = updateMetadata(db, { title: undefined });
 
@@ -248,7 +253,7 @@ describe('Metadata functions', () => {
     });
 
     it('should serialize Date values correctly', () => {
-      saveMetadata(db, { title: 'Test' });
+      saveMetadata(db, { id: 'test-uuid-serdate', title: 'Test' });
 
       const newDate = new Date('2025-06-01T00:00:00.000Z');
       const changes = updateMetadata(db, { date: newDate });
@@ -259,7 +264,7 @@ describe('Metadata functions', () => {
     });
 
     it('should serialize object values as JSON', () => {
-      saveMetadata(db, { tags: ['old'] });
+      saveMetadata(db, { id: 'test-uuid-serobj', tags: ['old'] });
 
       const changes = updateMetadata(db, { tags: ['new', 'tags'] });
 
@@ -269,7 +274,7 @@ describe('Metadata functions', () => {
     });
 
     it('should serialize string values', () => {
-      saveMetadata(db, { title: 'Old' });
+      saveMetadata(db, { id: 'test-uuid-serstr', title: 'Old' });
 
       const changes = updateMetadata(db, { title: 'New' });
 
@@ -281,7 +286,7 @@ describe('Metadata functions', () => {
 
   describe('getMetadataValue', () => {
     it('should return value for existing key', () => {
-      saveMetadata(db, { title: 'Found It' });
+      saveMetadata(db, { id: 'test-uuid-getval', title: 'Found It' });
 
       expect(getMetadataValue(db, 'title')).toBe('Found It');
     });
@@ -293,7 +298,7 @@ describe('Metadata functions', () => {
 
   describe('deleteMetadataKey', () => {
     it('should delete an existing key and return true', () => {
-      saveMetadata(db, { title: 'To Delete' });
+      saveMetadata(db, { id: 'test-uuid-delkey', title: 'To Delete' });
 
       const result = deleteMetadataKey(db, 'title');
 

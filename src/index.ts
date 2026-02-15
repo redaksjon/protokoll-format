@@ -62,3 +62,10 @@ export {
 export { HistoryManager } from './history.js';
 export { AuditManager } from './audit.js';
 export { ArtifactManager } from './artifacts.js';
+
+// UUID utilities
+export {
+  generateFilenameWithUuid,
+  extractUuidPrefix,
+  isUuidInput,
+} from './utils.js';

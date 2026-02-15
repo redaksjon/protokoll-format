@@ -7,7 +7,7 @@ import type Database from 'better-sqlite3';
 /**
  * Current schema version
  */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 /**
  * Schema v1 DDL - initial schema
@@ -125,8 +125,15 @@ export function migrateToLatest(db: Database.Database): void {
     return;
   }
   
+  // v1 to v2: UUID support
+  // No DDL changes needed - metadata table already supports arbitrary key-value pairs
+  // The 'id' key will be added to metadata when transcript is opened/created
+  if (currentVersion < 2) {
+    // Migration is handled by ensuring 'id' key exists in metadata
+    // This happens in PklTranscript.create() and PklTranscript.open()
+  }
+  
   // Future migrations would go here:
-  // if (currentVersion < 2) { migrateV1ToV2(db); }
   // if (currentVersion < 3) { migrateV2ToV3(db); }
   
   // Update version

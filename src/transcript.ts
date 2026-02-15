@@ -2,6 +2,7 @@
  * Main PklTranscript class - the primary API for working with .pkl files
  */
 
+import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { openDatabase, closeDatabase, transaction } from './database.js';
 import { HistoryManager } from './history.js';
@@ -72,8 +73,14 @@ export class PklTranscript {
       readOnly: false,
     };
 
+    // Generate UUID if not provided
+    const metadataWithId: TranscriptMetadata = {
+      ...metadata,
+      id: metadata.id || randomUUID()
+    };
+
     const transcript = new PklTranscript(config);
-    transcript.initialize(metadata);
+    transcript.initialize(metadataWithId);
     return transcript;
   }
 
