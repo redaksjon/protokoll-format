@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 output/
 # Dependencies
 node_modules/
@@ -29,8 +30,24 @@ Thumbs.db
 *.db
 
 # Logs
+=======
+.env
+dist
+node_modules
+>>>>>>> Stashed changes
 *.log
-npm-debug.log*
-
-# TypeScript cache
-*.tsbuildinfo
+.vscode
+coverage/
+test/
+output/
+input/
+processed/
+.maloomscan/
+.kodrdriv*
+outdiff
+outlog
+pnpm-workspace.yaml
+package-lock.json
+tsconfig.tsbuildinfo
+*~
+.DS_Store
