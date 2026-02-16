@@ -38,6 +38,7 @@ export type {
   PklTranscriptConfig,
   ContentDiff,
   AuditLogEntry,
+  EnhancementLogEntry,
   Artifact,
   RawTranscriptData,
   TranscriptHistory,
@@ -62,6 +63,7 @@ export {
 export { HistoryManager } from './history.js';
 export { AuditManager } from './audit.js';
 export { ArtifactManager } from './artifacts.js';
+export { EnhancementLogManager } from './enhancementLog.js';
 
 // UUID utilities
 export {
@@ -69,3 +71,10 @@ export {
   extractUuidPrefix,
   isUuidInput,
 } from './utils.js';
+
+// Migration utilities
+export {
+  migrateDirectory,
+  migrateFile,
+  type MigrationResult,
+} from './migrate.js';

@@ -115,6 +115,18 @@ export interface AuditLogEntry {
 }
 
 /**
+ * An enhancement log entry tracking pipeline processing steps
+ */
+export interface EnhancementLogEntry {
+  id: number;
+  timestamp: Date;
+  phase: 'transcribe' | 'enhance' | 'simple-replace';
+  action: string;
+  details?: Record<string, unknown>;
+  entities?: EntityReference[];
+}
+
+/**
  * An artifact stored in the transcript
  */
 export interface Artifact {

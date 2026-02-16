@@ -41,15 +41,16 @@ export function openDatabase(filePath: string, options: DatabaseOptions = {}): D
     // New database, initialize schema
     initializeSchema(db);
   } else if (version > 0) {
-    // Existing database, validate and migrate if needed
+    // Existing database, migrate if needed (must happen before validation)
+    if (!readonly) {
+      migrateToLatest(db);
+    }
+    
+    // Validate schema after migration
     const validation = validateSchema(db);
     if (!validation.valid) {
       db.close();
       throw new Error(`Invalid database schema: ${validation.errors.join(', ')}`);
-    }
-    
-    if (!readonly) {
-      migrateToLatest(db);
     }
   }
   

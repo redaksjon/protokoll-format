@@ -8,6 +8,7 @@ import { openDatabase, closeDatabase, transaction } from './database.js';
 import { HistoryManager } from './history.js';
 import { AuditManager } from './audit.js';
 import { ArtifactManager } from './artifacts.js';
+import { EnhancementLogManager } from './enhancementLog.js';
 import { saveMetadata, loadMetadata, updateMetadata } from './metadata.js';
 import type {
   TranscriptMetadata,
@@ -29,6 +30,7 @@ export class PklTranscript {
   private historyManager: HistoryManager;
   private auditManager: AuditManager;
   private artifactManager: ArtifactManager;
+  private enhancementLogManager: EnhancementLogManager;
   private _metadata: TranscriptMetadata | null = null;
   private _content: string | null = null;
   private _contentId: number | null = null;
@@ -46,6 +48,7 @@ export class PklTranscript {
     this.historyManager = new HistoryManager(this.db);
     this.auditManager = new AuditManager(this.db);
     this.artifactManager = new ArtifactManager(this.db);
+    this.enhancementLogManager = new EnhancementLogManager(this.db);
   }
 
   /**
@@ -324,6 +327,34 @@ export class PklTranscript {
    */
   hasArtifact(type: string): boolean {
     return this.artifactManager.hasArtifact(type);
+  }
+
+  // ============================================
+  // Enhancement Log Operations
+  // ============================================
+
+  /**
+   * Get the enhancement log manager for direct access
+   */
+  get enhancementLog(): EnhancementLogManager {
+    return this.enhancementLogManager;
+  }
+
+  /**
+   * Get the full enhancement log
+   */
+  getEnhancementLog(options?: {
+    phase?: 'transcribe' | 'enhance' | 'simple-replace';
+    action?: string;
+  }) {
+    return this.enhancementLogManager.getEnhancementLog(options);
+  }
+
+  /**
+   * Get enhancement log count
+   */
+  getEnhancementLogCount(): number {
+    return this.enhancementLogManager.getLogCount();
   }
 
   // ============================================
