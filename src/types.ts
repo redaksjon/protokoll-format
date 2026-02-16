@@ -129,7 +129,7 @@ export interface AuditLogEntry {
 export interface EnhancementLogEntry {
   id: number;
   timestamp: Date;
-  phase: 'transcribe' | 'enhance' | 'simple-replace';
+  phase: 'transcribe' | 'enhance' | 'simple-replace' | 'user-correction';
   action: string;
   details?: Record<string, unknown>;
   entities?: EntityReference[];
