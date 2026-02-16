@@ -5,14 +5,20 @@
 
 /**
  * Status of a transcript in its lifecycle
+ * 
+ * Upload workflow: uploaded → transcribing → initial → enhanced → reviewed → closed
+ * Error can occur at any point
  */
 export type TranscriptStatus = 
-  | 'initial' 
-  | 'enhanced' 
-  | 'reviewed' 
-  | 'in_progress' 
-  | 'closed' 
-  | 'archived';
+  | 'uploaded'      // File received, queued for transcription
+  | 'transcribing'  // Whisper processing in progress
+  | 'error'         // Transcription failed (with error details)
+  | 'initial'       // Successfully transcribed, ready for enhancement
+  | 'enhanced'      // LLM enhancement completed
+  | 'reviewed'      // Manual review completed
+  | 'in_progress'   // Work in progress
+  | 'closed'        // Final/archived
+  | 'archived';     // Long-term storage
 
 /**
  * A status transition record
@@ -82,6 +88,9 @@ export interface TranscriptMetadata {
   history?: StatusTransition[];
   tasks?: Task[];
   entities?: TranscriptEntities;
+  errorDetails?: string; // For 'error' status - store failure reason
+  audioFile?: string;    // Original uploaded filename
+  audioHash?: string;    // File hash for deduplication
 }
 
 /**
@@ -112,6 +121,18 @@ export interface AuditLogEntry {
   oldValue: string | null;
   newValue: string | null;
   changedAt: Date;
+}
+
+/**
+ * An enhancement log entry tracking pipeline processing steps
+ */
+export interface EnhancementLogEntry {
+  id: number;
+  timestamp: Date;
+  phase: 'transcribe' | 'enhance' | 'simple-replace' | 'user-correction';
+  action: string;
+  details?: Record<string, unknown>;
+  entities?: EntityReference[];
 }
 
 /**

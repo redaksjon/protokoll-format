@@ -7,7 +7,7 @@ import type Database from 'better-sqlite3';
 /**
  * Current schema version
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /**
  * Schema v1 DDL - initial schema
@@ -56,6 +56,16 @@ CREATE TABLE IF NOT EXISTS artifacts (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Enhancement log (audit trail of enhancement pipeline steps)
+CREATE TABLE IF NOT EXISTS enhancement_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL,
+  phase TEXT NOT NULL,
+  action TEXT NOT NULL,
+  details TEXT,
+  entities TEXT
+);
+
 -- Schema version tracking
 CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY
@@ -67,6 +77,8 @@ CREATE INDEX IF NOT EXISTS idx_content_history_content_id ON content_history(con
 CREATE INDEX IF NOT EXISTS idx_audit_log_field ON audit_log(field);
 CREATE INDEX IF NOT EXISTS idx_audit_log_changed_at ON audit_log(changed_at);
 CREATE INDEX IF NOT EXISTS idx_artifacts_type ON artifacts(type);
+CREATE INDEX IF NOT EXISTS idx_enhancement_log_timestamp ON enhancement_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_enhancement_log_phase ON enhancement_log(phase);
 `;
 
 /**
@@ -133,20 +145,57 @@ export function migrateToLatest(db: Database.Database): void {
     // This happens in PklTranscript.create() and PklTranscript.open()
   }
   
-  // Future migrations would go here:
-  // if (currentVersion < 3) { migrateV2ToV3(db); }
+  // v2 to v3: Enhancement log table
+  if (currentVersion < 3) {
+    migrateV2ToV3(db);
+  }
   
   // Update version
   db.prepare('UPDATE schema_version SET version = ?').run(CURRENT_SCHEMA_VERSION);
 }
 
 /**
- * Validate that a database has the expected schema
+ * Migrate from schema v2 to v3
+ * Adds enhancement_log table for tracking enhancement pipeline steps
+ */
+function migrateV2ToV3(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS enhancement_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp TEXT NOT NULL,
+      phase TEXT NOT NULL,
+      action TEXT NOT NULL,
+      details TEXT,
+      entities TEXT
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_enhancement_log_timestamp ON enhancement_log(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_enhancement_log_phase ON enhancement_log(phase);
+  `);
+}
+
+/**
+ * Validate that a database has the expected schema for its version
  */
 export function validateSchema(db: Database.Database): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
+  const version = getSchemaVersion(db);
   
-  const requiredTables = ['metadata', 'content', 'content_history', 'audit_log', 'artifacts', 'schema_version'];
+  // Base tables required for all versions
+  const baseTables = ['metadata', 'content', 'content_history', 'audit_log', 'artifacts', 'schema_version'];
+  
+  // Version-specific tables
+  const versionTables: Record<number, string[]> = {
+    1: [],
+    2: [],
+    3: ['enhancement_log'],
+  };
+  
+  // Build required tables list based on version
+  const requiredTables = [...baseTables];
+  if (version >= 3) {
+    requiredTables.push(...versionTables[3]);
+  }
   
   for (const table of requiredTables) {
     const exists = db.prepare(

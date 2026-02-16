@@ -8,7 +8,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { PklTranscript } from './transcript.js';
-import type { TranscriptMetadata, TranscriptStatus } from './types.js';
+import type { TranscriptMetadata, TranscriptStatus, TranscriptEntities } from './types.js';
 
 /**
  * Options for listing transcripts
@@ -25,6 +25,8 @@ export interface ListTranscriptsOptions {
   status?: TranscriptStatus;
   project?: string;
   tags?: string[];
+  entityId?: string;
+  entityType?: 'person' | 'project' | 'term' | 'company';
 }
 
 /**
@@ -100,6 +102,8 @@ export async function listTranscripts(options: ListTranscriptsOptions): Promise<
     status,
     project,
     tags,
+    entityId,
+    entityType,
   } = options;
 
   // Find all .pkl files
@@ -140,6 +144,44 @@ export async function listTranscripts(options: ListTranscriptsOptions): Promise<
         const contentMatch = content.toLowerCase().includes(searchLower);
         const projectMatch = metadata.project?.toLowerCase().includes(searchLower);
         if (!titleMatch && !contentMatch && !projectMatch) continue;
+      }
+      
+      // Entity filter
+      if (entityId) {
+        let entityFound = false;
+        
+        if (metadata.entities) {
+          // Map singular entity type to plural field name
+          const entityTypeMap: Record<string, keyof TranscriptEntities> = {
+            person: 'people',
+            project: 'projects',
+            term: 'terms',
+            company: 'companies',
+          };
+          
+          // If entityType is specified, only search that type
+          if (entityType) {
+            const fieldName = entityTypeMap[entityType];
+            const entitiesOfType = metadata.entities[fieldName];
+            if (Array.isArray(entitiesOfType)) {
+              entityFound = entitiesOfType.some(e => e.id === entityId);
+            }
+          } else {
+            // Search all entity types
+            const fieldNames: Array<keyof TranscriptEntities> = ['people', 'projects', 'terms', 'companies'];
+            for (const fieldName of fieldNames) {
+              const entitiesOfType = metadata.entities[fieldName];
+              if (Array.isArray(entitiesOfType)) {
+                if (entitiesOfType.some(e => e.id === entityId)) {
+                  entityFound = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        if (!entityFound) continue;
       }
       
       items.push({
