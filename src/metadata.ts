@@ -8,7 +8,17 @@ import type { TranscriptMetadata, TranscriptStatus, StatusTransition, Task, Rout
 /**
  * Metadata keys that are stored as simple strings
  */
-const SIMPLE_STRING_KEYS = ['id', 'title', 'project', 'projectId', 'recordingTime', 'duration'] as const;
+const SIMPLE_STRING_KEYS = [
+    'id', 
+    'title', 
+    'project', 
+    'projectId', 
+    'recordingTime', 
+    'duration',
+    'audioFile',
+    'audioHash',
+    'errorDetails',
+] as const;
 
 /**
  * Metadata keys that are stored as JSON
