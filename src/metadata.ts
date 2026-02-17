@@ -2,6 +2,7 @@
  * Metadata serialization for SQLite storage
  */
 
+import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { TranscriptMetadata, TranscriptStatus, StatusTransition, Task, RoutingMetadata, TranscriptEntities } from './types.js';
 
@@ -80,11 +81,8 @@ export function loadMetadata(db: Database.Database): TranscriptMetadata {
 
   const dataMap = new Map(rows.map(r => [r.key, r.value]));
   
-  // id is required - throw if missing
-  const id = dataMap.get('id');
-  if (!id) {
-    throw new Error('Transcript metadata missing required id field');
-  }
+  // id is required - auto-generate if missing (for pre-UUID pkl files)
+  const id = dataMap.get('id') || randomUUID();
 
   const metadata: TranscriptMetadata = { id };
 

@@ -111,8 +111,10 @@ describe('Metadata functions', () => {
   });
 
   describe('loadMetadata', () => {
-    it('should throw error when database has no id field', () => {
-      expect(() => loadMetadata(db)).toThrow('Transcript metadata missing required id field');
+    it('should auto-generate UUID when database has no id field', () => {
+      const result = loadMetadata(db);
+      expect(result.id).toBeDefined();
+      expect(result.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     });
 
     it('should load simple string fields', () => {
