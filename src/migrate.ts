@@ -150,6 +150,97 @@ export async function migrateFile(filePath: string): Promise<{ success: boolean;
   }
 }
 
+export interface BackfillDatesResult {
+  totalFiles: number;
+  backfilled: number;
+  alreadyHasDate: number;
+  unparseable: number;
+  errors: number;
+  errorFiles: Array<{ path: string; error: string }>;
+}
+
+/**
+ * Parse a date from a transcript file path.
+ * Handles two path formats under .../YYYY/M/:
+ *   DD-HHmm-title.pkl  → full date + time
+ *   DD-<anything>      → date only, time set to midnight
+ */
+function parseDateFromPath(filePath: string): Date | null {
+  // Full format: YYYY/M/DD-HHmm (e.g. 2026/1/11-0907-title.pkl)
+  const fullMatch = filePath.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})-(\d{2})(\d{2})/);
+  if (fullMatch) {
+    const [, year, month, day, hour, minute] = fullMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute));
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  // Day-only format: YYYY/M/DD-anything (e.g. 2026/1/6-bc0d78fd-idea-...)
+  const dayMatch = filePath.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})-/);
+  if (dayMatch) {
+    const [, year, month, day] = dayMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
+}
+
+/**
+ * Backfill missing date metadata in PKL files by deriving the date from the file path.
+ * Only modifies files that have no date in their metadata.
+ */
+export async function backfillDates(
+  directory: string,
+  dryRun: boolean = true
+): Promise<BackfillDatesResult> {
+  const result: BackfillDatesResult = {
+    totalFiles: 0,
+    backfilled: 0,
+    alreadyHasDate: 0,
+    unparseable: 0,
+    errors: 0,
+    errorFiles: [],
+  };
+
+  const pklFiles = await findPklFiles(directory);
+  result.totalFiles = pklFiles.length;
+
+  for (const filePath of pklFiles) {
+    try {
+      const transcript = PklTranscript.open(filePath, { readOnly: true });
+      const existingDate = transcript.metadata.date;
+      transcript.close();
+
+      if (existingDate) {
+        result.alreadyHasDate++;
+        continue;
+      }
+
+      const date = parseDateFromPath(filePath);
+      if (!date) {
+        result.unparseable++;
+        continue;
+      }
+
+      if (!dryRun) {
+        const writable = PklTranscript.open(filePath, { readOnly: false });
+        writable.updateMetadata({ date });
+        writable.close();
+      }
+
+      result.backfilled++;
+    } catch (error) {
+      result.errors++;
+      result.errorFiles.push({
+        path: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return result;
+}
+
 export interface ProjectIdMapping {
   [slug: string]: string; // slug -> UUID mapping
 }

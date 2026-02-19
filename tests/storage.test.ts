@@ -159,6 +159,7 @@ describe('Storage API', () => {
         title: 'January Meeting',
         date: new Date('2026-01-01'),
         project: 'Project A',
+        projectId: 'cffd998f-ff32-4d27-9ea7-7976172c44d1',
         tags: ['meeting'],
         status: 'reviewed',
       });
@@ -169,6 +170,7 @@ describe('Storage API', () => {
         title: 'February Standup',
         date: new Date('2026-02-01'),
         project: 'Project B',
+        projectId: 'a1b2c3d4-5678-90ab-cdef-1234567890ab',
         tags: ['standup'],
         status: 'initial',
       });
@@ -179,6 +181,7 @@ describe('Storage API', () => {
         title: 'March Review',
         date: new Date('2026-03-01'),
         project: 'Project A',
+        projectId: 'cffd998f-ff32-4d27-9ea7-7976172c44d1',
         tags: ['review', 'meeting'],
         status: 'reviewed',
       });
@@ -230,6 +233,41 @@ describe('Storage API', () => {
       
       expect(result.total).toBe(2);
       expect(result.transcripts.every(t => t.project === 'Project A')).toBe(true);
+    });
+
+    it('should filter by projectId (UUID)', async () => {
+      const result = await listTranscripts({ 
+        directory: tempDir,
+        projectId: 'cffd998f-ff32-4d27-9ea7-7976172c44d1',
+      });
+      
+      expect(result.total).toBe(2);
+      expect(result.transcripts.map(t => t.title).sort()).toEqual(['January Meeting', 'March Review']);
+    });
+
+    it('should filter by projectId via entities.projects when projectId not in metadata', async () => {
+      // Create a transcript with project only in entities (no top-level projectId)
+      const t4 = PklTranscript.create(path.join(tempDir, '2026-04-01-entities-only.pkl'), {
+        title: 'Entities Only',
+        date: new Date('2026-04-01'),
+        project: 'Project B',
+        tags: [],
+        status: 'initial',
+        entities: {
+          projects: [{ id: 'a1b2c3d4-5678-90ab-cdef-1234567890ab', name: 'Project B', type: 'project' }],
+        },
+      });
+      t4.updateContent('Content');
+      t4.close();
+
+      const result = await listTranscripts({ 
+        directory: tempDir,
+        projectId: 'a1b2c3d4-5678-90ab-cdef-1234567890ab',
+      });
+      
+      expect(result.total).toBe(2); // February Standup + Entities Only
+      expect(result.transcripts.map(t => t.title).sort()).toContain('February Standup');
+      expect(result.transcripts.map(t => t.title).sort()).toContain('Entities Only');
     });
 
     it('should filter by tags', async () => {

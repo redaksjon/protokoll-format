@@ -24,6 +24,7 @@ export interface ListTranscriptsOptions {
   search?: string;
   status?: TranscriptStatus;
   project?: string;
+  projectId?: string;
   tags?: string[];
   entityId?: string;
   entityType?: 'person' | 'project' | 'term' | 'company';
@@ -101,6 +102,7 @@ export async function listTranscripts(options: ListTranscriptsOptions): Promise<
     search,
     status,
     project,
+    projectId,
     tags,
     entityId,
     entityType,
@@ -121,7 +123,17 @@ export async function listTranscripts(options: ListTranscriptsOptions): Promise<
       
       // Apply filters
       if (status && metadata.status !== status) continue;
-      if (project && metadata.project !== project) continue;
+      // Project filter: when both projectId and project (name) are provided, match if EITHER matches.
+      // This handles transcripts with project name but no projectId (legacy data).
+      if (projectId || project) {
+        const hasProjectId = projectId && (
+          metadata.projectId === projectId ||
+          metadata.entities?.projects?.some((p) => p.id === projectId)
+        );
+        const hasProjectName = project && metadata.project === project;
+        const matches = hasProjectId || hasProjectName;
+        if (!matches) continue;
+      }
       if (tags && tags.length > 0) {
         const itemTags = metadata.tags || [];
         if (!tags.some(t => itemTags.includes(t))) continue;
