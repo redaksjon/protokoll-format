@@ -77,7 +77,9 @@ export {
   migrateDirectory,
   migrateFile,
   migrateProjectIds,
+  backfillDates,
   type MigrationResult,
   type ProjectIdMapping,
   type ProjectIdMigrationResult,
+  type BackfillDatesResult,
 } from './migrate.js';
