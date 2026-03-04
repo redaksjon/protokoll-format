@@ -4,7 +4,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
-import type { TranscriptMetadata, TranscriptStatus, StatusTransition, Task, RoutingMetadata, TranscriptEntities } from './types.js';
+import type { TranscriptMetadata, TranscriptStatus, StatusTransition, Task, RoutingMetadata, TranscriptEntities, TranscriptComment } from './types.js';
 
 /**
  * Metadata keys that are stored as simple strings
@@ -17,6 +17,7 @@ const SIMPLE_STRING_KEYS = [
     'recordingTime', 
     'duration',
     'audioFile',
+    'originalFilename',
     'audioHash',
     'errorDetails',
 ] as const;
@@ -24,7 +25,7 @@ const SIMPLE_STRING_KEYS = [
 /**
  * Metadata keys that are stored as JSON
  */
-const JSON_KEYS = ['tags', 'routing', 'history', 'tasks', 'entities'] as const;
+const JSON_KEYS = ['tags', 'routing', 'history', 'tasks', 'comments', 'entities'] as const;
 
 /**
  * Save metadata to database
@@ -155,6 +156,12 @@ export function loadMetadata(db: Database.Database): TranscriptMetadata {
       changed: t.changed ? new Date(t.changed) : undefined,
       completed: t.completed ? new Date(t.completed) : undefined,
     })) as Task[];
+  }
+
+  // Comments
+  const commentsValue = dataMap.get('comments');
+  if (commentsValue) {
+    metadata.comments = JSON.parse(commentsValue) as TranscriptComment[];
   }
 
   // Entities

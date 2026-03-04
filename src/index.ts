@@ -32,6 +32,7 @@ export type {
   TranscriptStatus,
   StatusTransition,
   Task,
+  TranscriptComment,
   EntityReference,
   RoutingMetadata,
   TranscriptEntities,
