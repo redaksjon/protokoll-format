@@ -18,7 +18,8 @@ export type TranscriptStatus =
   | 'reviewed'      // Manual review completed
   | 'in_progress'   // Work in progress
   | 'closed'        // Final/archived
-  | 'archived';     // Long-term storage
+  | 'archived'      // Long-term storage
+  | 'deleted';      // Soft-delete marker (not physically removed)
 
 /**
  * A status transition record
@@ -39,6 +40,16 @@ export interface Task {
   created: Date;
   changed?: Date;
   completed?: Date;
+}
+
+/**
+ * A comment associated with a transcript
+ */
+export interface TranscriptComment {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 /**
@@ -87,9 +98,11 @@ export interface TranscriptMetadata {
   status?: TranscriptStatus;
   history?: StatusTransition[];
   tasks?: Task[];
+  comments?: TranscriptComment[];
   entities?: TranscriptEntities;
   errorDetails?: string; // For 'error' status - store failure reason
-  audioFile?: string;    // Original uploaded filename
+  audioFile?: string;    // Stored audio object/file name (e.g. sha256.ext)
+  originalFilename?: string; // Original uploaded filename from user device
   audioHash?: string;    // File hash for deduplication
 }
 
