@@ -27,6 +27,15 @@ const SIMPLE_STRING_KEYS = [
  */
 const JSON_KEYS = ['tags', 'routing', 'history', 'tasks', 'comments', 'entities'] as const;
 
+function parseJsonValue<T>(value: string, key: string): T {
+  try {
+    return JSON.parse(value) as T;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid JSON in metadata.${key}: ${reason}`);
+  }
+}
+
 /**
  * Save metadata to database
  */
@@ -117,19 +126,19 @@ export function loadMetadata(db: Database.Database): TranscriptMetadata {
   // Tags
   const tagsValue = dataMap.get('tags');
   if (tagsValue) {
-    metadata.tags = JSON.parse(tagsValue) as string[];
+    metadata.tags = parseJsonValue<string[]>(tagsValue, 'tags');
   }
 
   // Routing
   const routingValue = dataMap.get('routing');
   if (routingValue) {
-    metadata.routing = JSON.parse(routingValue) as RoutingMetadata;
+    metadata.routing = parseJsonValue<RoutingMetadata>(routingValue, 'routing');
   }
 
   // History
   const historyValue = dataMap.get('history');
   if (historyValue) {
-    const parsed = JSON.parse(historyValue) as Array<{ from: string; to: string; at: string }>;
+    const parsed = parseJsonValue<Array<{ from: string; to: string; at: string }>>(historyValue, 'history');
     metadata.history = parsed.map(h => ({
       from: h.from as TranscriptStatus,
       to: h.to as TranscriptStatus,
@@ -140,14 +149,14 @@ export function loadMetadata(db: Database.Database): TranscriptMetadata {
   // Tasks
   const tasksValue = dataMap.get('tasks');
   if (tasksValue) {
-    const parsed = JSON.parse(tasksValue) as Array<{
+    const parsed = parseJsonValue<Array<{
       id: string;
       description: string;
       status: string;
       created: string;
       changed?: string;
       completed?: string;
-    }>;
+    }>>(tasksValue, 'tasks');
     metadata.tasks = parsed.map(t => ({
       id: t.id,
       description: t.description,
@@ -161,13 +170,13 @@ export function loadMetadata(db: Database.Database): TranscriptMetadata {
   // Comments
   const commentsValue = dataMap.get('comments');
   if (commentsValue) {
-    metadata.comments = JSON.parse(commentsValue) as TranscriptComment[];
+    metadata.comments = parseJsonValue<TranscriptComment[]>(commentsValue, 'comments');
   }
 
   // Entities
   const entitiesValue = dataMap.get('entities');
   if (entitiesValue) {
-    metadata.entities = JSON.parse(entitiesValue) as TranscriptEntities;
+    metadata.entities = parseJsonValue<TranscriptEntities>(entitiesValue, 'entities');
   }
 
   return metadata;
