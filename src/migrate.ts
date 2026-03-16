@@ -281,9 +281,28 @@ export async function migrateProjectIds(
 
       if (metadata.projectId && projectMappings[metadata.projectId]) {
         const newProjectId = projectMappings[metadata.projectId];
+        const updates: {
+          projectId: string;
+          entities?: typeof metadata.entities;
+        } = { projectId: newProjectId };
+
+        const projects = metadata.entities?.projects;
+        if (Array.isArray(projects) && projects.length > 0) {
+          const updatedProjects = projects.map((projectRef) => {
+            const mappedId = projectMappings[projectRef.id];
+            return mappedId ? { ...projectRef, id: mappedId } : projectRef;
+          });
+          const changed = updatedProjects.some((projectRef, index) => projectRef.id !== projects[index]?.id);
+          if (changed) {
+            updates.entities = {
+              ...(metadata.entities || {}),
+              projects: updatedProjects,
+            };
+          }
+        }
 
         if (!dryRun) {
-          transcript.updateMetadata({ projectId: newProjectId });
+          transcript.updateMetadata(updates);
         }
 
         console.log(`${path.basename(filePath)}: ${metadata.projectId} -> ${newProjectId}`);

@@ -74,9 +74,10 @@ export class HistoryManager {
       // Reverse the diff by swapping old/new
       const reversedPatch = this.reversePatch(diff);
       const result = applyPatch(content, reversedPatch);
-      if (typeof result === 'string') {
-        content = result;
+      if (typeof result !== 'string') {
+        throw new Error(`Failed to reconstruct content ${contentId} at version ${versionId}: patch did not apply`);
       }
+      content = result;
     }
 
     return content;
