@@ -1,12 +1,10 @@
-<<<<<<< Updated upstream
-output/
 # Dependencies
 node_modules/
 
 # Build output
 dist/
 
-# Environment variables
+# Environment
 .env
 
 # kodrdriv internal files
@@ -30,24 +28,16 @@ Thumbs.db
 *.db
 
 # Logs
-=======
-.env
-dist
-node_modules
->>>>>>> Stashed changes
 *.log
-.vscode
-coverage/
+
+# Project paths & tooling
 test/
 output/
 input/
 processed/
 .maloomscan/
-.kodrdriv*
 outdiff
 outlog
 pnpm-workspace.yaml
-package-lock.json
 tsconfig.tsbuildinfo
 *~
-.DS_Store
