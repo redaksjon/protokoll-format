@@ -16,7 +16,7 @@ export class EnhancementLogManager {
    */
   logStep(
     timestamp: Date,
-    phase: 'transcribe' | 'enhance' | 'simple-replace',
+    phase: 'transcribe' | 'enhance' | 'simple-replace' | 'user-correction',
     action: string,
     details?: Record<string, unknown>,
     entities?: EntityReference[]
@@ -37,7 +37,7 @@ export class EnhancementLogManager {
    */
   logSteps(steps: Array<{
     timestamp: Date;
-    phase: 'transcribe' | 'enhance' | 'simple-replace';
+    phase: 'transcribe' | 'enhance' | 'simple-replace' | 'user-correction';
     action: string;
     details?: Record<string, unknown>;
     entities?: EntityReference[];
