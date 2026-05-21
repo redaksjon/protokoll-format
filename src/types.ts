@@ -103,6 +103,7 @@ export interface TranscriptMetadata {
   errorDetails?: string; // For 'error' status - store failure reason
   audioFile?: string;    // Stored audio object/file name (e.g. sha256.ext)
   originalFilename?: string; // Original uploaded filename from user device
+  audioSizeBytes?: number; // Uploaded audio size in bytes for queue/status UX
   audioHash?: string;    // File hash for deduplication
 }
 

@@ -68,6 +68,10 @@ export function saveMetadata(db: Database.Database, metadata: TranscriptMetadata
       stmt.run('confidence', String(metadata.confidence));
     }
 
+  if (metadata.audioSizeBytes !== undefined) {
+    stmt.run('audioSizeBytes', String(metadata.audioSizeBytes));
+  }
+
     // JSON values
     for (const key of JSON_KEYS) {
       const value = metadata[key];
@@ -121,6 +125,11 @@ export function loadMetadata(db: Database.Database): TranscriptMetadata {
   const confidenceValue = dataMap.get('confidence');
   if (confidenceValue) {
     metadata.confidence = parseFloat(confidenceValue);
+  }
+
+  const audioSizeValue = dataMap.get('audioSizeBytes');
+  if (audioSizeValue) {
+    metadata.audioSizeBytes = parseInt(audioSizeValue, 10);
   }
 
   // Tags
